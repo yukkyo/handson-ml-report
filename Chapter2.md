@@ -14,9 +14,8 @@
 *  この資料は「[Hands-On Machine Learning with Scikit-Learn and TensorFlow - O'Reilly Media](http://shop.oreilly.com/product/0636920052289.do) 」
 を読んだ際の（主にソースコードに関する）簡単な解説を残したものです。
 *  全部を解説したわけではないので注意
-*  あとは一部訳を間違えているかもしれないので信用しすぎないこと
 *  余裕があればソースコード周りの背景知識もまとめたい
-
+*  何かあったら yukkyo12221222@gmail.com まで
 ---
 
 # Chapter 2 
@@ -232,7 +231,7 @@ def transform(self, X, y=None):
 ---
 ### Prepare the data for ML algorithms
 ##### 複数の（sklearn の）手続きを一連の流れにまとめる
-
+##### [【翻訳】scikit-learn 0.18 User Guide 4.1. パイプラインとFeatureUnion：推定器の組み合わせ - Qiita](http://qiita.com/nazoking@github/items/fdfd207b3127d6d026e0)
 ```python
 # 複数の処理や分類をまとめる
 from sklearn.pipeline import Pipeline
@@ -244,6 +243,231 @@ num_pipeline = Pipeline([
         ('attribs_adder', CombinedAttributesAdder()),
         ('std_scaler', StandardScaler()),
     ])
-
 housing_num_tr = num_pipeline.fit_transform(housing_num)
 ```
+---
+### Prepare the data for ML algorithms
+##### 数値かカテゴリ列を選択するためのクラス
+```python
+from sklearn.base import BaseEstimator, TransformerMixin
+
+# Create a class to select
+# numerical or categorical columns 
+# since Scikit-Learn doesn't handle DataFrames yet
+
+# クラス定義のカッコ内は、継承元を表す
+# うまく継承すると 先ほどの Pipeline 等に組み込める
+class DataFrameSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, attribute_names):
+        self.attribute_names = attribute_names
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X):
+        return X[self.attribute_names].values
+```
+
+---
+### Prepare the data for ML algorithms
+##### 数値かカテゴリ列を選択するためのクラス
+```python
+num_attribs = list(housing_num)
+cat_attribs = ["ocean_proximity"]
+
+# 実際に Pipeline に組み込んでいる例
+num_pipeline = Pipeline([
+        ('selector', DataFrameSelector(num_attribs)),
+        ('imputer', Imputer(strategy="median")),
+        ('attribs_adder', CombinedAttributesAdder()),
+        ('std_scaler', StandardScaler()),
+    ])
+
+cat_pipeline = Pipeline([
+        ('selector', DataFrameSelector(cat_attribs)),
+        ('label_binarizer', LabelBinarizer()),
+    ])
+```
+---
+##### 補足: パイプラインについて
+*  **利便性** : 推定器のシーケンス全体に合わせるためには、fit を呼び出してデータを一度 predict する
+*  **ジョイントパラメータの選択** : パイプライン内のすべての推定器のパラメータを一度にグリッドで検索できる
+
+最後のパイプライン以外はすべて変換器でないといけない（transform メソッドが必要 &rightarrow; 継承しなきゃ）。最後の推定器は、任意のタイプ（変換器、分類器）であってよい
+
+---
+### Prepare the data for ML algorithms
+##### 複数の変換器の出力を組み合わせる
+```python
+from sklearn.pipeline import FeatureUnion
+
+# それぞれの変換を横にして繋げている（1行を対象としている）
+full_pipeline = FeatureUnion(transformer_list=[
+        ("num_pipeline", num_pipeline),
+        ("cat_pipeline", cat_pipeline),
+    ])
+```
+---
+
+## Select and train a model
+```python
+# 線形回帰
+from sklearn.linear_model import LinearRegression
+lin_reg = LinearRegression()
+lin_reg.fit(housing_prepared, housing_labels)
+
+# let's try the full pipeline on a few training instances
+some_data = housing.iloc[:5]          #  テストデータ
+some_labels = housing_labels.iloc[:5] #  そのラベル
+some_data_prepared = full_pipeline.transform(some_data)
+
+print("Predicts:", lin_reg.predict(some_data_prepared))
+
+# 平均二乗誤差 と 平均絶対値誤差
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+```
+---
+## Select and train a model
+
+```python
+# 決定木を用いた学習
+from sklearn.tree import DecisionTreeRegressor
+
+# モデル定義と学習
+tree_reg = DecisionTreeRegressor(random_state=42)
+tree_reg.fit(housing_prepared, housing_labels)
+
+# 予測
+housing_predicts = tree_reg.predict(housing_prepared)
+
+# 平均二乗誤差
+tree_mse = mean_squared_error(
+               housing_labels, housing_predicts)
+               
+tree_rmse = np.sqrt(tree_mse) #  平方根  
+```
+
+---
+## Fine-tune your model
+```python
+# クロスバリデーション
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(
+             tree_reg,         #  学習モデル
+             housing_prepared, #  データ
+             housing_labels,   #  データのラベル
+             # この score は何故 negative ??? -> 要確認
+             scoring="neg_mean_squared_error",
+             cv=10             #  分割数
+         )
+# 平方根
+tree_rmse_scores = np.sqrt(-scores)
+```
+
+---
+## Fine-tune your model
+##### ランダムフォレスト回帰とサポートベクター回帰
+
+```python
+# ランダムフォレスト回帰（回帰とか分類の違いは知っている前提）
+from sklearn.ensemble import RandomForestRegressor
+
+forest_reg = RandomForestRegressor(random_state=42)
+forest_reg.fit(housing_prepared, housing_labels) #  学習
+predicts = forest_reg.predict(housing_prepared)  #  予測
+
+# サポートベクター回帰
+from sklearn.svm import SVR
+
+svm_reg = SVR(kernel="linear") #  SV 系は要カーネル指定
+svm_reg.fit(housing_prepared, housing_labels) #  学習
+predicts = svm_reg.predict(housing_prepared)  #  予測
+```
+---
+### Fine-tune your model
+##### 良いパラメータを探す
+
+```python
+from sklearn.model_selection import GridSearchCV
+
+# どこら辺を探索するか定義する
+# それぞれのパラメータの意味はそのうち調べる
+param_grid = [
+    # try 12 (3×4) combinations of hyperparameters
+    {'n_estimators': [3, 10, 30],
+     'max_features': [2, 4, 6, 8]},
+    # then try 6 combinations with bootstrap set as False
+    {'bootstrap': [False], #  重複を許して新しいサンプルを作る
+     'n_estimators': [3, 10],
+     'max_features': [2, 3, 4]},
+  ]
+```
+---
+### Fine-tune your model
+##### 良いパラメータを探す（続き）
+```python
+forest_reg = RandomForestRegressor(random_state=42)
+# train across 5 folds,
+# that's a total of (12+6)*5=90 rounds of training 
+
+# 探索モデル作成
+grid_search = GridSearchCV(
+                  forest_reg, #  モデル
+                  param_grid, #  探索するパラメータ一覧
+                  cv=5,       #  クロスバリデーション分割数
+                  scoring='neg_mean_squared_error'
+              )
+              
+# 探索実行
+grid_search.fit(housing_prepared, housing_labels)
+```
+---
+### Fine-tune your model
+##### 良いパラメータを探す（ランダム探索）
+
+```python
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint
+# パラメータの分布を定義する。分布に沿った乱数で探索
+param_distribs = {
+        'n_estimators': randint(low=1, high=200),
+        'max_features': randint(low=1, high=8),
+    }
+forest_reg = RandomForestRegressor(random_state=42)
+rnd_search = RandomizedSearchCV(
+                 forest_reg,
+                 param_distributions=param_distribs,
+                 n_iter=10, cv=5, 
+                 scoring='neg_mean_squared_error',
+                 random_state=42)
+rnd_search.fit(housing_prepared, housing_labels)
+```
+
+---
+### Extra: Label Binarizer hack
+* **やりたいこと**：前処理と学習も一つの pipeline でまとめたい
+* これまでの処理は以下の通り
+```python
+# 前処理（ラベル以外の部分）
+housing_prepared = full_pipeline.fit_transform(housing)
+# ラベルの部分の定義（元が実数なので特に加工していない）
+housing_labels = strat_train_set[
+                     "median_house_value"].copy()
+# 学習する部分（線形回帰の場合）
+forest_reg.fit(housing_prepared, housing_labels)
+# 予測部分
+housing_predictis = lin_reg.predict(test_data)
+```
+
+---
+* もとの `LabelBinarizer` の `fit_transform()` は一つのパラメータしか受け付けない。
+```python
+# 0 か 1 からなる One-hot vector に変換する
+from sklearn.preprocessing import LabelBinarizer
+LabelBinarizer().fit_transform(sample) #  引数がひとつだけ
+```
+---
+### Extra material
+##### Label Binarizer hack
+* 前処理関連での
+* これを拡張したクラスを定義して
