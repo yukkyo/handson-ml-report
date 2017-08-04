@@ -460,14 +460,128 @@ housing_predictis = lin_reg.predict(test_data)
 ```
 
 ---
+### Extra: Label Binarizer hack
 * もとの `LabelBinarizer` の `fit_transform()` は一つのパラメータしか受け付けない。
 ```python
 # 0 か 1 からなる One-hot vector に変換する
 from sklearn.preprocessing import LabelBinarizer
 LabelBinarizer().fit_transform(sample) #  引数がひとつだけ
 ```
+* よってそのまままとめるとエラーになる。（余裕があれば実行結果載せる）
+```python
+full_pipeline_with_predictor = Pipeline([
+        ("preparation", full_pipeline),
+        ("linear", LinearRegression())
+    ])
+full_pipeline_with_predictor.fit(housing, housing_labels)
+```
 ---
-### Extra material
-##### Label Binarizer hack
-* 前処理関連での
-* これを拡張したクラスを定義して
+### Extra: Label Binarizer hack
+* 補足 : 最後以外のパイプラインの要素には `transform()` が必要。実際には `fit_transform()` が全体パイプラインの `fit()` 実行時に呼び出されている模様？
+* つまりどういうことだってばよ？
+    *  &rightarrow; `LabelBinarizer` を継承して `fit_transform()` をうまく書き換えたクラスを作ってパイプラインにつっこめばOK
+
+---
+### Extra: Label Binarizer hack
+* クラス継承らへんは[[Python]クラス継承(super) - Qiita](http://qiita.com/Kodaira_/items/42dfe18c81af98bf0db3) などを見て勉強してください。
+* 以下のように拡張したクラスを定義する。
+```python
+# SFLB : SupervisionFriendlyLabelBinarizer の略
+# クラス定義の引数部分は継承元
+class SFLB(LabelBinarizer):
+    # 引数が二つあっても良いように定義している
+    # デフォルト引数を定義しているので、引数一つにも対応している
+    def fit_transform(self, X, y=None):
+        # super() は自身の親クラスを呼び出している
+        # よって親クラス（LabelBinarizer）の fit_transform
+        # を呼び出している
+        # Python3 からは super() のみで良い模様
+        return super(SFLB, self).fit_transform(X)
+```
+---
+
+### Extra: Label Binarizer hack
+```python
+# Replace the Labelbinarizer with a SFLB
+cat_pipeline.steps[1] = ("label_binarizer", SFLB())
+
+# これで全体パイプラインが作成できる
+# cat_pipeline は full_pipeline 内にはいっていることに注意
+# hint: 参照渡し
+full_pipeline_with_predictor = Pipeline([
+        ("preparation", full_pipeline),
+        ("linear", LinearRegression())
+    ])
+
+# データの前処理と学習
+full_pipeline_with_predictor.fit(housing, housing_labels)
+
+# 予測
+full_pipeline_with_predictor.predict(some_data)
+```
+
+---
+#### Extra: Model persistence using joblib
+```python
+# モデル（学習した後等の）は下記のように保存・読み込みができる
+from sklearn.externals import joblib
+joblib.dump(my_model, "my_model.pkl")         # 保存
+my_model_loaded = joblib.load("my_model.pkl") # 読み込み
+```
+#### Extra: Example SciPy distributions for RandomizedSearchCV
+```python
+from scipy.stats import geom, expon
+# geometric : 幾何分布。
+# ベルヌーイ試行で初めて成功させるまでの回数
+geom_distrib=geom(0.5).rvs(10000, random_state=42)
+# exponential : 指数分布
+expon_distrib=expon(scale=1).rvs(10000, random_state=42)
+```
+---
+## Exercise solutions: 1
+* `問題1` : Support Vector Machine regressor （サポートベクター回帰）を用いて最もパフォーマンスが良いものを探せ。カーネルは `linear` と `rbf` の二種類選べる。
+* rbf カーネルとか指定するとどうなる？
+  * 各点を高次元に写像することで、これまでできなかった分類ができるようになったりする
+  * ただし linear よりは計算量が多くなる
+
+---
+## Exercise solutions: 1
+
+```python
+from sklearn.model_selection import GridSearchCV
+
+param_grid = [
+    {'kernel': ['linear'],
+     'C': [10., 30., 100., 300., 1000.,
+           3000., 10000., 30000.0]},
+    {'kernel': ['rbf'],
+     'C': [1.0, 3.0, 10., 30., 100., 300., 1000.0],
+     # rbf の方がパラメータが増えている
+     'gamma': [0.01, 0.03, 0.1, 0.3, 1.0, 3.0]}]
+
+svm_reg = SVR()
+grid_search = GridSearchCV(
+                  svm_reg, param_grid, cv=5,
+                  scoring='neg_mean_squared_error',
+                  verbose=2, n_jobs=4)
+grid_search.fit(housing_prepared, housing_labels) #  探索
+```
+---
+## Exercise solutions: 2
+* `問題2` : GridSearch の代わりに RandomizedSearch を使ってみる
+```python
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import expon, reciprocal
+# Note: gamma is ignored when kernel is "linear"
+param_distribs = {
+        'kernel': ['linear', 'rbf'],
+        'C': reciprocal(20, 200000),
+        'gamma': expon(scale=1.0)}
+svm_reg = SVR()
+rnd_search = RandomizedSearchCV(
+                 svm_reg, n_iter=50, cv=5,
+                 param_distributions=param_distribs,
+                 scoring='neg_mean_squared_error',
+                 verbose=2, n_jobs=4, random_state=42)
+rnd_search.fit(housing_prepared, housing_labels)
+```
