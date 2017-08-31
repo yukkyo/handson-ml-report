@@ -61,7 +61,7 @@ theta_best = \
 
 $\theta_{best} = (\mathrm{X}_b^{\mathrm{T}} \times \mathrm{X}_b)^{-1} \times \mathrm{X}_b^{\mathrm{T}} \times y$
 
-なんでこうなるかは教科書読もう（偏微分した結果）
+[線形回帰の Normal Equation（正規方程式）について](http://qiita.com/antimon2/items/ac1ebaed75ad58406b94)
 
 ---
 
@@ -80,9 +80,48 @@ $\mathrm{gradients}(t) = \frac{1}{len(\mathrm{X}_b)} \cdot \mathrm{X}_b^{\mathrm
 ---
 
 ## Stochastic Gradient Descent
+通常の勾配法（gradient descent）の場合、訓練データ $\mathrm{X}$ を一度にすべて使って更新していた
+
+それに対し、確率的勾配法（Stochastic Gradient Descent）では、 $\mathrm{X}$ の中ランダムに選んだデータ
+$\mathrm{x}_i$ を使ってパラメータである $\theta$ を更新していく
+* 局所最適解に落ちずらい
+* 冗長な学習データがある場合勾配法より高速学習
+* 学習データを収集しながら逐次敵に学習できる
+
+---
 ## Mini-batch gradient descent
+* batch がまとめて更新
+* stochastic が 1 つずつ更新
+* Mini-batch では小さいバッチサイズを決めてそのサイズ個のデータを使ってパラメータを更新していく
+  * batch と stochastic の間をとったようなもの
+
+---
 ## Polynomial regression
+* 多項式（$x^n$ とかが入っている）の学習と予測について
+* 今回は下記の式を扱う（ $e$ はランダムなエラー）
+$$
+\frac{1}{2}x^2 + x + 2 + e
+$$
+* `np.random.randn(m, n)` は m 行 n 列の乱数一覧を渡す（平均 0 分散 1）
+---
+#### `PolynomialFeatures` って何？
+* 多項回帰式を求めるために、多項式次元に特徴ベクトルを写像している？
+* 方針: 写像した後の空間で linear で回帰
+* 高次の多項式だとクロスタームやらいっぱい出てきて書くのが大変
+  * PolynomialFeature で特徴を作れば楽
+* サンプルコードの例では、元のベクトルは 1 次元で、PolynomialFeatures の degree (設定した関数の次数)は 2 なので、$x -> (x, x^2)$ となっている
+* TODO: 教科書の該当箇所を確認する
+
+---
+* もちろん予測したいときも、予測する特徴ベクトルを PolynomialFeature で写像する必要がある。
+
+#### Q: plot_learning_curves は何をしている？
+
+
+---
 
 ## Regularized models
 
 ## 
+
+
