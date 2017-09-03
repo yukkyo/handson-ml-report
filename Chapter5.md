@@ -35,6 +35,10 @@ $$
 * 分類境界（ここでは超平面という）と各データの距離（マージン）に着目しているのが SVM の特徴
 * あとサポートベクトルと呼ばれる一部のデータ（1つとは限らない）で識別境界が決定されるので、疎なデータに強い
 * また予測するときや新しくデータを追加したときは、サポートベクトルだけ見ればよいため効率的。
+
+##### 数学的補足
+*  (a, b) 行列（ベクトル）と (b, c) 行列（ベクトル）をかけると (a, c) 行列になる
+
 ---
 
 * 識別境界 : $\omega^{\mathrm{T}} \bold x + b = 0$ 
@@ -104,14 +108,72 @@ $$
 ---
 ##### SVM で最適化したい対象
 * マージン（境界に一番近い点から境界までの距離）を最大化したい
-![さくら](images/sakura.jpg)
+* 超平面 $f(\bold x ) = \space \bold w^T \bold x + b = 0$ から、点 $\bold a$ までの距離は $\frac{|f(\bold a)|}{\| \bold w\|}$ で与えられる（次ページ参照）
+* よって次の問題を解くことと同じ
+$$
+\text{arg max}_{\bold w , b}
+\left(
+\frac{1}{\|\bold w\|} \text{min}_n [t_n(\bold w^T \bold x + b)]
+\right)
+$$
+*  $t_n$ はラベル（負なら-1、正なら1）
+
+---
+
+$\bold w \rightarrow k \bold w$、$b \rightarrow kb$ としても超平面からの距離 $\frac{|f(\bold x)|}{\|\bold w\|}$ は変わらないので、最も近い点について以下を成立させて良い
+
+$$
+t_n(\bold w^T \bold x + b) = 1
+$$
+
+よって先程の問題は下記のようになる
+
+$$
+\text{arg max}_{\bold w , b}
+\left(
+\frac{1}{\|\bold w\|}
+\right)
+$$
+
+$$
+\Rightarrow \text{arg min}_{\bold w, b} \space \frac{1}{2} \bold w^T \bold w
+$$
+
+$\frac{1}{2}$ はあとで計算が楽になるためつけてる
+
+---
+##### 補足：超平面からの距離
+* ある点 $\bold x_0$ と平面 $f(\bold x ) = \space \bold w^T \bold x + b = 0$ との距離を考える。
+* 点 $\bold x_0$ に $k$ 倍にした $\frac{\bold w}{|\bold w|}$ を足すと平面にぶつかる。この点を $\bold z$ とする。また $\frac{\bold w}{|\bold w|}$ は大きさ $1$ であることから、求める距離は $|k|$ である。
+* 点 $\bold z$ は平面上の点なので $f(\bold z)=0$
+---
+
+* よって以下の式が成り立つ
+$$f(\bold z) = f(\bold x_0 + k \frac{\bold w}{|\bold w|})$$
+
+$$
+= \bold w^T \bold x_0 + k\frac{\bold w^T \bold w}{|\bold w|} + b
+= \bold w^T \bold x_0 + b + k|\bold w| = 
+$$
+
+$$
+= f(\bold x_0) + k|\bold w| = 0
+$$
+
+$$
+\Rightarrow |k| = \frac{f(\bold x_0)}{|\bold w|}
+$$
+※ $\bold w^T \bold w = |\bold w|^2$ 
+
+---
+##### 補足：超平面からの距離（PRML上より引用）
+![超平面からの距離](images/5_1.PNG)
 
 
 ---
 
 
 ##### ハードマージン線形SVM分類の最適化対象
-* マージンを最大化したい →　
 * 目的関数
 $$
 \text{minimize}_{(\bold w , b)} \space \frac{1}{2} \bold w^T \bold w
@@ -122,6 +184,29 @@ $$
 \space t^{(i)} \left( \bold w^T \bold x^{(i)} + b \right) \geq 1 \space \text{for} \space i = 1, 2, \cdots, m
 $$
 
+---
+
+
+##### ソフトマージン線形SVM分類の最適化対象
+* 目的関数
+$$
+\text{minimize}_{(\bold w , b, \zeta)}
+\space
+\frac{1}{2} \bold w^T \bold w +
+C\sum^m_{i=1}\zeta^{(i)}
+$$
+
+* 制約条件
+$$
+\space t^{(i)} \left( \bold w^T \bold x^{(i)} + b \right) \geq 1 - \zeta^{(i)}
+$$
+
+$$
+\text{and} \space \zeta^{(i)} \geq 0
+$$
+$$
+\text{for} \space i = 1, 2, \cdots, m
+$$
 
 ---
 
@@ -146,8 +231,101 @@ $$
   * $\dot{\bold x}^{(i)}$ は $i = 0$（バイアス分）のときだけ $\bold 1$ で、他の場合は $\bold x^{(i)}$ と同じ
 
 ---
-* ※ (a, b) 行列（ベクトル）と (b, c) 行列（ベクトル）をかけると (a, c) 行列になる
-  * 目的関数は 1 次元の値になることが分かる
+##### 双対問題について
+* 主変数がたくさんあって制約条件が少なければ、双対問題の方が変数が少なくできる
+* すると、主問題より楽に解ける可能性が高い
+* 双対問題の方はよく手に入るソルバーで解けるらしい
+
+$$
+\text{minimize}_{\alpha}
+\space
+\frac{1}{2}
+\sum^m_{i=1}\sum^m_{j=1}
+\alpha_i \alpha_j t_i t_j \bold x^T_i \bold x_j \space
+-
+\sum^m_{i=1}\alpha_i
+$$
+
+$$
+\text{subject to: } \space
+\alpha_i \geq 1
+\space
+\text{for}
+\space
+i = 1,2,\cdots,m
+$$
+
+---
+##### 双対問題を解いたあと
+以下のようにして $\bold w$ と $b$ を計算できる。ハットは推定値などの意味を含む
+
+$$
+\hat{\bold w} = \sum^m_{i=1}\hat{\alpha_i} t_i \bold x_i
+$$
+
+$$
+\hat{b} = \frac{1}{n_S} \sum_{i \in S}
+\left(
+1 -
+t_i ( \hat{\bold w}^T \bold x_i)
+\right)
+$$
+
+* $S$ は $\hat{\alpha}_i > 0$ となる $i$ の集合。すなわちサポートベクトル一覧を表す。また $n_S = |S|$。その他は 0
+
+---
+
+##### カーネル SVM における予測（判定）
+
+$$
+h_{\hat{\bold w}, \hat{b}}(\phi(\bold x_{new})) = 
+\hat{\bold w}^T \phi(\bold x_{new}) 
+\space + \hat{b}
+$$
+
+$$
+=
+\left(
+\sum^m_{i=1}\hat{\alpha}_i t_i
+\phi(\bold x_i)
+
+\right)^T \phi(\bold x_{new})
+\space+ \hat{b}
+$$
+
+$$
+=
+\sum^m_{i=1}\hat{\alpha}_i t_i
+\left(
+\phi(\bold x_i)^T
+\phi(\bold x_{new})
+\right)
+\space
++
+\hat{b}
+$$
+
+$$
+=
+\sum_{i \in S}\hat{\alpha}_i t_i
+K(\bold x_i, \bold x_{new})
+\space
++
+\hat{b}
+$$
+
+サポートベクトルとカーネル関数で予測できる
+
+---
+##### カーネル使うと何が嬉しいの？
+* 普通に高次元に変換してそのまま解けば良いのでは？
+  * すごく大きい次元（例えば無限次元）に変換してから計算するのは無理
+  * でも高次元上での **内積の値** であれば比較的簡単に計算できる場合が多い
+  * SVM を学習する上で解きたい最適化問題では、最終的には高次元上でのベクトルは扱わず、 **内積の値** だけ扱っていた →　カーネルトリック
+  * 高次元のベクトルを直接扱わずに高次元上での計算ができた！
+
+
+---
 * 各カーネルとその中身
 
 |カーネル|数式|
@@ -158,21 +336,70 @@ $$
 |Sigmoid|$K(\bold a, \bold b) = \space \tanh \left( \gamma \bold a^T \cdot \bold b + r \right)$|
 
 * $\gamma$ と $r$ は違うので注意
-
----
-##### カーネル使うと何が嬉しいの？
-* 普通に高次元に変換してそのまま解けば良いのでは？
-  * すごく大きい次元（例えば無限次元）に変換してから計算するのは無理
-  * でも高次元上での **内積の値** であれば比較的簡単に計算できる場合が多い
-  * SVM を学習する上で解きたい最適化問題では、最終的には高次元上でのベクトルは扱わず、 **内積の値** だけ扱っていた →　カーネルトリック
-  * 高次元のベクトルを直接扱わずに高次元上での計算ができた！
-
 ---
 
 
 ### Hinge loss
+誤差関数のひとつ。引数が正の数ならそのまま出力し、それ以外なら 0 を出力する。
+大きい意味はないので説明は省略。
 
-### Extra material
+---
 
+### Extra material 
+##### Linear SVM classifier implementation using Batch Gradient Descent
+そのうち追記する
+
+---
+
+### Extra material questions
+* 1: SVM の基本的な考えは？
+  * マージン（超平面とデータの距離）を最大化
+* 2: サポートベクトルって何？
+  * 超平面から一番近い各クラスのデータ（ベクトル）。それ以外のベクトルは超平面の決定に関与しない
+* 3: SVM に入力するときはどうしてスケーリングが大事なのか
+  * SVM はなるべく広い帯を作ろうとするので、スケーリングがされていないと小さい特徴を無視する傾向があるため
+---
+
+* 4: SVM 分類器はデータの分類時に、確信度スコアのようなものを出力できるか。
+  * できる。ただし直接確率に変換できるわけではない。Scikit-learn で SVM モデルを構築する際に `probability = True` を指定すると、学習後に SVM のスコアに対してロジスティック回帰によって確率を測定する。
+  * `predict_proba()` や `predict_log_proba()` 
+---
+
+* 5: データ数が100万、特徴数が数百のときには、主問題と双対問題のどちらを解くべきか？
+  * まずカーネル SVM は双対問題しか使えない
+  * よって線形 SVM の場合のみ考える
+    * この場合は主問題を解く。
+    * データの特徴次元よりデータ数のほうがはるかに大きいため
+
+---
+
+
+* 6: もし RBF カーネルSVM をトレーニングしたときに、訓練データに underfit していた場合は、$\gamma$ を増やすべきか、減らすべきか？
+  * 正則化が強すぎるので、これを弱めるためには gamma や C を増やす
+
+* 7: 既存のソルバーを使ってソフトマージン 線形 SVM を解く際は、二次凸問題のパラメータをどのように設定するべきか？
+  * よくわからないので省略
+---
+
+
+*  8: 線形分離可能なデータを LinearSVC で学習する。その場合同じデータセットを SVC と SGDClassifier で学習させると、大体同じモデルが得られることを確認せよ
+  * notebook
+
+---
+
+
+* 9: SVM 分類器で MNIST データセットを学習する。SVM は二値分類器なので、10 個のクラスを分類するために one-versus-all 分類器を使わなければならない。あなたはプロセスを速くするために小さい評価データセットを使ってハイパーパラメータを調整したい。どのようにやるか？そして精度はどうなるか？
+  * 次ページの方法を試す
+
+---
+1. 線形SVM（LinearSVC）でそのまま学習　→ 0.8263（悪い）
+2. 上記のまま、データをスケーリング　→　0.9224（まあまあ）
+3. 上記のデータのまま量は6分の1にして、RBFカーネルSVM（SVC）を適用　→　0.9462
+4. 上記について、gamma と C はデフォルトのままだったので、 範囲を決めてデータ数 1000 で randomized search を行って良いパラメータを探す。その後全データで学習した　→　0.9710 （悪くない）。ただしテストデータだと 0.9997 なので、やや overfitting 気味か。
+---
+
+* 10: California housing dataset (Chapter 2 で扱った) に対し、サポートベクター回帰を使ってモデルを構築して学習させよ
+  * notebook 
+---
 
 ### Exercise solutions
