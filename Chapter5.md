@@ -47,12 +47,8 @@ $$
 
 * 特にコメントなし
 
----
-
 ### Sensitivity to feature scales
-* 線形回帰モデルは、スケーリングをしないと精度に大きく影響した
-* SVM ではスケールの変更前後で大きく変わらない（教科書確認）
-* 
+* SVM もスケーリング大事
 ---
 
 ### Sensitivity to outliers
@@ -161,7 +157,7 @@ $$
 $$
 
 $$
-\Rightarrow |k| = \frac{f(\bold x_0)}{|\bold w|}
+\Rightarrow |k| = \frac{|f(\bold x_0)|}{|\bold w|}
 $$
 ※ $\bold w^T \bold w = |\bold w|^2$ 
 
