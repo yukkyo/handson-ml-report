@@ -230,10 +230,49 @@ RandomForestClassifier(
 
 ##### Feature Importance
 
+* 決定木 : 重要な特徴ほど根本で判断してる → 下（葉）に近づくほど重要でない特徴を使うようになる
+* Scikit-learn では `feature_importances_` で各特徴の重要度が確認できる
+* とりあえず重要な特徴が知りたい場合は RF でモデルを作ってみるのはあり
 
+---
 
 ##### Boosting
+
+* Boosting(元は hypothesis boosting)は弱学習器を強い学習器にする方法
+* アイデア : 予測器を順次学習させ、前の学習器を修正しようとすること？
+* **AdaBoost** と **Gradient Boosting** が有名
+
+---
+
 ##### AdaBoost
+
+* 以前の学習器を修正する方法の１つ : 予測を間違えたデータにより気をつけて学習する　→　重みをつける(boost)
+* AdaBoost の学習ステップ
+   * ① ベースとなる分類器を作成し予測する
+   * ② 作った分類器で予測し、間違えたデータの重みを増やす
+   * ③ 重みを元に分類器を構築する
+   * ④ ②と③を繰り返す
+* 上記は並列化できないためスケーリングに注意
+---
+
+**AdaBoost 補足**
+$j$ 番目の学習器のエラー重み
+
+$$
+
+r_j = \frac{{\displaystyle\sum_{i=1, \hat{y_j}^{(i)} \neq y^{(i)}}^m w^{(i)}}}{\displaystyle\sum_{i=1}^m w^{(i)}}
+
+$$
+
+* $m$ : 訓練データの数
+* $j$ : 学習器の番号（j番目）
+* $\hat{y_j}^{(i)}$ : $j$ 番目の学習器の $i$ 番目のデータに対する予測値
+
+---
+
 ##### Gradient Boosting
+
+
+
 ##### Stacking
 ##### Exercises
