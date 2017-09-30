@@ -256,11 +256,11 @@ RandomForestClassifier(
 ---
 
 **AdaBoost 補足**
-$j$ 番目の学習器のエラー重み
+$j$ 番目の学習器のエラー率
 
 $$
 
-r_j = \frac{{\displaystyle\sum_{i=1, \hat{y_j}^{(i)} \neq y^{(i)}}^m w^{(i)}}}{\displaystyle\sum_{i=1}^m w^{(i)}}
+r_j = \frac{{\displaystyle\sum_{i=1, \hat{y_j}^{(i)} \neq y^{(i)}}^m w^{(i)}}}{\sum_{i=1}^m w^{(i)}}
 
 $$
 
@@ -270,9 +270,83 @@ $$
 
 ---
 
+エラー重みから各学習器の重み①を計算
+
+$$
+\alpha_j = \eta \log \frac{1 -r_j}{r_j}
+$$
+
+各データ $i$ に対して重みを更新（間違えたら増えるイメージ）
+
+
+$$
+\mathrm{if} \space \hat{y_j}^{(i)} = y^{(i)} \space , w^{(i)} \leftarrow w^{(i)}
+$$
+
+$$
+\mathrm{if} \space \hat{y_j}^{(i)} \neq y^{(i)} \space, 
+w^{(i)} \leftarrow w^{(i)}\exp (\alpha_j)
+$$
+
+その後全ての重みは $\sum^m_{i-1} w^{(i)}$ で割って正規化
+
+---
+
+**Adaboost での予測**
+
+$$
+\hat{y}(\bold x) = \arg \max_k \sum^N_{j=1, \hat{y}_j(\bold x) = k} \alpha_j
+$$
+
+* $N$ : 予測器の数
+* 予測が $k$ だと言っている予測器の $\alpha$（重み）を足し合わせ、最も大きくなるような $k$ が予測値
+
+---
+
 ##### Gradient Boosting
 
+* Boosting の仲間、進化系の XGBoost は 2015 年の Kaggle で猛威を振るった
+* Boosting 全体の特徴 : すでに学習した弱分類器のパラメータを変化させるのではなく、新しい弱分類器を加えることで全体の出力を変化させられる
+* AdaBoost → 前の分類器で誤分類された値の重みを大きくするように更新する
+* Gradient Boosting → 勾配情報を使った Boosting らしい。全分類器の和を１つの関数と見てる？
+* GBDT(Gradient Boosting Decision Tree) : 弱分類器に決定木を使った Gradient Boosting
 
+---
+
+**Gradient Boosting （ベーシック）の擬似コード**
+
+* $f_0(x) \leftarrow \arg \min_\rho \sum^N_{i=1} L(y_i, \rho);$
+* $\mathrm{for} \space t=1 \space to \space T \space$ do
+   * $$\tilde{y}_i \leftarrow -
+     \frac{\partial L(y_i, F_{t-1}(x_i) )}{\partial F_{t-1}(x_i)}
+     \space \mathrm{for} \space \mathrm{all} \space i
+     $$
+   * $\mathrm{fit} \space f_t \space \mathrm{to} \space \mathrm{minimize} \space \sum^N_{i=1} (\tilde{y}_i - f_t(x_i ))^2$
+   * $\alpha_t \leftarrow \arg \min_\alpha \phi(F_{t-1} + \alpha f_t)$
+   * $F_t = F_{t-1} + \alpha_t f_t$
+* $\mathrm{return} \space F_T;$
+
+
+---
 
 ##### Stacking
+
+* アンサンブル法の１つ。 stacked generalization の略
+* 簡単な流れ
+   1. 訓練用データセットを分けて図のように複数の学習器で学習する（Figure 7-13）
+   2. 学習した学習器を用いて、訓練に使ったデータセットで予測して値を取得し、各学習器から取得した値を特徴量として使って学習器をされに作る
+* Scikit-learn には無いけど、[gitでの実装](https://github.com/viisar/brew) はあるので試せる
+
+---
+
+
 ##### Exercises
+
+間に合わなかったので省略
+
+---
+
+##### Reference
+* [Gradient Boosting と XGBoost](https://zaburo-ch.github.io/post/xgboost/)
+
+* [アンサンブル学習について勉強したのでまとめました：Bagging(Random Forest / Decision Jungles / Deep Forest) / Boosting(AdaBoost / Gradient Boosting / XGBoost) / Stacking](http://st-hakky.hatenablog.com/entry/2017/07/28/214518)
