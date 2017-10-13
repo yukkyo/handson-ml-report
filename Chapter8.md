@@ -1,4 +1,10 @@
-<!-- $theme: gaia -->
+<!--
+$theme: gaia
+prerender: true
+page_number: true
+$width: 12in
+$size: 4:3
+-->
 
 ### Hands on Machine Learning with
 ###   Scikit-Learn &TensolFlow
@@ -34,7 +40,7 @@
 
 ---
 
-### The Curse of Dimensionality
+#### The Curse of Dimensionality
 
 * 日常生活は 3 次元だから高次元イメージしづらい
 * $1 \times 1$ の四角形(2次元)を考える
@@ -73,7 +79,7 @@
 
 * 多様体である仮定を置くこと ⇒ 低次元で表現するとより簡単になることを仮定している
   * いつもそうとは限らない（テキスト図参照）
-  * ⇒ モデルのトレーニング前に次元削減を行うことで、**学習は速くなるが、より良い精度やよりシンプルに解けるようになることは限らない**
+  * ⇒ モデルのトレーニング前に次元削減を行うことで、**学習は速くなるが、より良い精度やよりシンプルに解けるようになるとは限らない**
 
 ---
 
@@ -98,12 +104,18 @@
 
 #### PCA: Projecting Down to d Dimensions
 
+* SVD(特異値分解) してる
+* PCA では各点が原点の中心にあると仮定している ⇒ 各データについて、そのデータの平均値が引いてあることを確認する ⇒ Scikit-laern は勝手に引いているから気にしなくてよい
+
 ---
 
 #### PCA: Using Scikit-Learn
 
 
 #### PCA: Explainged Variance Ratio
+
+* ある主成分が、データ全体の分散のうちどれくらいを占めるのかを表す。
+* 主成分をどこまで残すのかを検討する際に参考にする
 
 ---
 
@@ -130,6 +142,35 @@ aaa
 ---
 
 ### LLE
+
+* 多様体学習の一つ
+* 多様体: 元は線形である空間（面とか線とか）を曲げたりねじったりして高次元上に表される空間
+* 局所的な位置関係を保存して低次元に写像しようとしている
+* 
+
+---
+
+### LLEの詳細
+
+1.  あるデータに $\bold x$ に対して $K$ 最近傍(最も近い $K$ 個のデータのこと)を選出する
+    * 最近傍で得られたデータ集合を $\kappa$ とする
+2.  $\kappa$ に属するデータ集合 $\bold x_j \in \kappa$ の線形結合を考える。これが小さくなれば、近傍データで $\bold x$ を表現できていることになる
+
+$$
+\left| \bold x - \sum_{\bold x_j \in \kappa}w_j \bold x_j \right|^2
+$$
+
+
+---
+
+3. 全てのデータ $\bold x_i$ に対して上記の関数を作る
+
+$$
+\left| \bold x_i - \sum_{\bold x_j \in \kappa^{(i)}}w_j^{(i)} \bold x_j \right|^2
+$$
+
+
+---
 
 
 ### Other Dimensionality Reduction Techniques
@@ -161,6 +202,10 @@ $$
 * $\bar{x}$ : $x$ の平均
 * $\bar{y}$ : $y$ の平均
 
+---
+
+#### 補足: 共分散
+
 python だと下記のように求められる
 
 ```python
@@ -171,10 +216,6 @@ y_bar = y.mean()
 s = (x - x_bar) @ (y - y_bar)
 s / x.shape[0]
 ```
-
-や
-
-`x.mean`
 
 ---
 
